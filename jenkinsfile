@@ -1,14 +1,8 @@
 pipeline {
     agent any
 
-    environment {
-        IMAGE_NAME   = "deepakramalingaiah-boop/devops-webapp"
-        DOCKER_CREDS = "dockerhub-creds"
-    }
-
     stages {
-
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/deepakramalingahia-boop/terraform.git'
@@ -18,29 +12,20 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
+                    sh 'docker build -t devops-webapp:latest .'
                 }
             }
         }
 
-        stage('Push Image to Docker Hub') {
+        stage('Run Docker Container') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDS) {
-                        docker.image("${IMAGE_NAME}:${BUILD_NUMBER}").push()
-                        docker.image("${IMAGE_NAME}:${BUILD_NUMBER}").push('latest')
-                    }
+                    sh '''
+                    docker rm -f webapp || true
+                    docker run -d -p 8081:80 --name webapp devops-webapp:latest
+                    '''
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo "✅ Docker image pushed successfully"
-        }
-        failure {
-            echo "❌ Pipeline failed"
         }
     }
 }
